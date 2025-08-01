@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>Patch Upload Tool</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+  <!-- Dùng đúng Firebase CDN SDK cho trình duyệt -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
   <style>
     body {
@@ -121,6 +121,7 @@
   <div id="log"></div>
 
   <script>
+    // Firebase config đúng của bạn
     const firebaseConfig = {
       apiKey: "AIzaSyAX1VmVPJJJfKm2UtgOZxKDhrwn3KOWTGw",
       authDomain: "offsets-58776.firebaseapp.com",
@@ -131,8 +132,10 @@
       appId: "1:652299297116:web:f5df2715cf15b937c06536"
     };
 
+    // Khởi tạo Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
     const logDiv = document.getElementById("log");
 
     function log(text) {
