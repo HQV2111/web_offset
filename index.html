@@ -15,9 +15,7 @@
       background: #f5f5f5;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
       align-items: center;
-      height: 100vh;
       padding-top: 40px;
     }
 
@@ -27,28 +25,21 @@
       padding: 25px 30px;
       border-radius: 10px;
       box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-    }
-
-    h2 {
       text-align: center;
     }
 
-    textarea {
-      width: 100%;
-      height: 300px;
-      padding: 10px;
-      font-size: 14px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      resize: vertical;
-      font-family: monospace;
-      margin-top: 15px;
+    h2 {
       margin-bottom: 20px;
     }
 
-    button {
-      width: 100%;
-      padding: 10px;
+    .mode-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .mode-buttons button {
+      padding: 12px;
       font-size: 16px;
       background-color: #2196F3;
       color: white;
@@ -57,8 +48,39 @@
       cursor: pointer;
     }
 
-    button:hover {
+    .mode-buttons button:hover {
       background-color: #1976D2;
+    }
+
+    textarea, input[type="file"] {
+      width: 100%;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+
+    textarea {
+      height: 300px;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .submit-btn:hover {
+      background-color: #388E3C;
     }
 
     #log {
@@ -76,16 +98,29 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Nhập Patch JSON</h2>
+  <div class="container" id="modeSelect">
+    <h2>Chọn cách nhập Patch</h2>
+    <div class="mode-buttons">
+      <button onclick="selectMode('paste')">📋 Dán Offset</button>
+      <button onclick="selectMode('file')">📁 Tải File JSON</button>
+    </div>
+  </div>
+
+  <div class="container" id="pasteMode" style="display:none">
+    <h2>Dán Offset JSON</h2>
     <textarea id="jsonInput" placeholder='Dán nội dung JSON tại đây'></textarea>
-    <button onclick="submitJSON()">Nhập</button>
+    <button class="submit-btn" onclick="submitJSON('paste')">Nhập</button>
+  </div>
+
+  <div class="container" id="fileMode" style="display:none">
+    <h2>Chọn File JSON</h2>
+    <input type="file" id="fileInput" accept=".json">
+    <button class="submit-btn" onclick="submitJSON('file')">Nhập</button>
   </div>
 
   <div id="log"></div>
 
   <script>
-    // Cấu hình Firebase của bạn
     const firebaseConfig = {
       apiKey: "AIzaSyAX1VmVPJJJfKm2UtgOZxKDhrwn3KOWTGw",
       authDomain: "offsets-58776.firebaseapp.com",
@@ -96,9 +131,8 @@
       appId: "1:652299297116:web:f5df2715cf15b937c06536"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     const logDiv = document.getElementById("log");
 
     function log(text) {
@@ -106,36 +140,47 @@
       logDiv.scrollTop = logDiv.scrollHeight;
     }
 
-    async function submitJSON() {
+    function selectMode(mode) {
+      document.getElementById("modeSelect").style.display = "none";
+      document.getElementById("pasteMode").style.display = mode === "paste" ? "block" : "none";
+      document.getElementById("fileMode").style.display = mode === "file" ? "block" : "none";
       logDiv.innerText = ""; // clear log
-      const input = document.getElementById("jsonInput").value;
-      let parsed;
+    }
+
+    async function submitJSON(mode) {
+      logDiv.innerText = "";
+      let jsonData = "";
 
       try {
-        parsed = JSON.parse(input);
+        if (mode === "paste") {
+          jsonData = document.getElementById("jsonInput").value;
+        } else {
+          const file = document.getElementById("fileInput").files[0];
+          if (!file) return alert("❌ Vui lòng chọn file JSON.");
+          jsonData = await file.text();
+        }
+
+        const parsed = JSON.parse(jsonData);
+        const entries = Object.entries(parsed);
+
+        log(`🔄 Đang gửi ${entries.length} offset lên Firebase...\n`);
+        let success = 0, fail = 0;
+
+        for (const [offset, value] of entries) {
+          try {
+            await db.ref("offsets/" + offset).set(value);
+            log(`✅ ${offset}`);
+            success++;
+          } catch (err) {
+            log(`❌ ${offset} → ${err.message}`);
+            fail++;
+          }
+        }
+
+        log(`\n🎉 Hoàn tất! Thành công: ${success} | Lỗi: ${fail}`);
       } catch (e) {
         alert("❌ JSON không hợp lệ!\n" + e.message);
-        return;
       }
-
-      const entries = Object.entries(parsed);
-      log(`🔄 Đang gửi ${entries.length} offset lên Firebase...\n`);
-
-      let success = 0;
-      let fail = 0;
-
-      for (const [offset, value] of entries) {
-        try {
-          await db.ref("offsets/" + offset).set(value);
-          log(`✅ Gửi thành công: ${offset}`);
-          success++;
-        } catch (err) {
-          log(`❌ Gửi lỗi: ${offset} → ${err.message}`);
-          fail++;
-        }
-      }
-
-      log(`\n🎉 Hoàn tất! Thành công: ${success} | Lỗi: ${fail}`);
     }
   </script>
 </body>
