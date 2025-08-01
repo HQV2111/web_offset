@@ -5,7 +5,7 @@
   <title>Patch Upload Tool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Dùng đúng Firebase CDN SDK cho trình duyệt -->
+  <!-- Firebase SDK compat -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
@@ -107,21 +107,20 @@
   </div>
 
   <div class="container" id="pasteMode" style="display:none">
-    <h2>Dán Offset JSON</h2>
-    <textarea id="jsonInput" placeholder='Dán nội dung JSON tại đây'></textarea>
+    <h2>Dán Offset</h2>
+    <textarea id="jsonInput" placeholder='"0x1234": "00 00 80 D2", ...'></textarea>
     <button class="submit-btn" onclick="submitJSON('paste')">Nhập</button>
   </div>
 
   <div class="container" id="fileMode" style="display:none">
     <h2>Chọn File JSON</h2>
-    <input type="file" id="fileInput" accept=".json">
+    <input type="file" id="fileInput" accept=".json,.txt">
     <button class="submit-btn" onclick="submitJSON('file')">Nhập</button>
   </div>
 
   <div id="log"></div>
 
   <script>
-    // Firebase config đúng của bạn
     const firebaseConfig = {
       apiKey: "AIzaSyAX1VmVPJJJfKm2UtgOZxKDhrwn3KOWTGw",
       authDomain: "offsets-58776.firebaseapp.com",
@@ -132,10 +131,8 @@
       appId: "1:652299297116:web:f5df2715cf15b937c06536"
     };
 
-    // Khởi tạo Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     const logDiv = document.getElementById("log");
 
     function log(text) {
@@ -147,31 +144,52 @@
       document.getElementById("modeSelect").style.display = "none";
       document.getElementById("pasteMode").style.display = mode === "paste" ? "block" : "none";
       document.getElementById("fileMode").style.display = mode === "file" ? "block" : "none";
-      logDiv.innerText = ""; // clear log
+      logDiv.innerText = "";
     }
 
     async function submitJSON(mode) {
       logDiv.innerText = "";
-      let jsonData = "";
+      let rawData = "";
 
       try {
         if (mode === "paste") {
-          jsonData = document.getElementById("jsonInput").value;
+          rawData = document.getElementById("jsonInput").value.trim();
         } else {
           const file = document.getElementById("fileInput").files[0];
-          if (!file) return alert("❌ Vui lòng chọn file JSON.");
-          jsonData = await file.text();
+          if (!file) return alert("❌ Vui lòng chọn file JSON hoặc TXT.");
+          rawData = (await file.text()).trim();
         }
 
-        const parsed = JSON.parse(jsonData);
-        const entries = Object.entries(parsed);
+        const lines = rawData.split(/\r?\n/);
+        const validPairs = {};
 
-        log(`🔄 Đang gửi ${entries.length} offset lên Firebase...\n`);
-        let success = 0, fail = 0;
+        for (const line of lines) {
+          const match = line.match(/"([^"]+)"\s*:\s*"([^"]+)"/);
+          if (match) {
+            const key = match[1].trim();
+            const value = match[2].trim();
+            validPairs[key] = value;
+          }
+        }
+
+        const entries = Object.entries(validPairs);
+        if (entries.length === 0) return alert("❌ Không tìm thấy dòng offset hợp lệ.");
+
+        log(`🔄 Kiểm tra và gửi ${entries.length} offset lên Firebase...\n`);
+        let success = 0, skipped = 0, fail = 0;
 
         for (const [offset, value] of entries) {
           try {
-            await db.ref("offsets/" + offset).set(value);
+            const ref = db.ref("offsets/" + offset);
+            const snapshot = await ref.once("value");
+
+            if (snapshot.exists()) {
+              log(`⚠️ Bỏ qua: ${offset} (đã tồn tại)`);
+              skipped++;
+              continue;
+            }
+
+            await ref.set(value);
             log(`✅ ${offset}`);
             success++;
           } catch (err) {
@@ -180,9 +198,9 @@
           }
         }
 
-        log(`\n🎉 Hoàn tất! Thành công: ${success} | Lỗi: ${fail}`);
+        log(`\n🎉 Hoàn tất! Thành công: ${success} | Trùng: ${skipped} | Lỗi: ${fail}`);
       } catch (e) {
-        alert("❌ JSON không hợp lệ!\n" + e.message);
+        alert("❌ Đã xảy ra lỗi khi xử lý:\n" + e.message);
       }
     }
   </script>
