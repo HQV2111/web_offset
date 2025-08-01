@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Patch Upload Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      height: 100vh;
+      padding-top: 40px;
+    }
+
+    .container {
+      width: 600px;
+      background: white;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      font-family: monospace;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #1976D2;
+    }
+
+    #log {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 13px;
+      border-radius: 5px;
+      width: 600px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Nhập Patch JSON</h2>
+    <textarea id="jsonInput" placeholder='Dán nội dung JSON tại đây'></textarea>
+    <button onclick="submitJSON()">Nhập</button>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    // Cấu hình Firebase của bạn
+    const firebaseConfig = {
+      apiKey: "AIzaSyAX1VmVPJJJfKm2UtgOZxKDhrwn3KOWTGw",
+      authDomain: "offsets-58776.firebaseapp.com",
+      databaseURL: "https://offsets-58776-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "offsets-58776",
+      storageBucket: "offsets-58776.appspot.com",
+      messagingSenderId: "652299297116",
+      appId: "1:652299297116:web:f5df2715cf15b937c06536"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const logDiv = document.getElementById("log");
+
+    function log(text) {
+      logDiv.innerText += text + "\n";
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    async function submitJSON() {
+      logDiv.innerText = ""; // clear log
+      const input = document.getElementById("jsonInput").value;
+      let parsed;
+
+      try {
+        parsed = JSON.parse(input);
+      } catch (e) {
+        alert("❌ JSON không hợp lệ!\n" + e.message);
+        return;
+      }
+
+      const entries = Object.entries(parsed);
+      log(`🔄 Đang gửi ${entries.length} offset lên Firebase...\n`);
+
+      let success = 0;
+      let fail = 0;
+
+      for (const [offset, value] of entries) {
+        try {
+          await db.ref("offsets/" + offset).set(value);
+          log(`✅ Gửi thành công: ${offset}`);
+          success++;
+        } catch (err) {
+          log(`❌ Gửi lỗi: ${offset} → ${err.message}`);
+          fail++;
+        }
+      }
+
+      log(`\n🎉 Hoàn tất! Thành công: ${success} | Lỗi: ${fail}`);
+    }
+  </script>
+</body>
+</html>
