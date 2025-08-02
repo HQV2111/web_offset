@@ -95,6 +95,24 @@
       border-radius: 5px;
       width: 600px;
     }
+#chatgpt-link {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 9999;
+}
+
+#chatgpt-logo {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+#chatgpt-logo:hover {
+  transform: scale(1.1);
+}
+
   </style>
 </head>
 <body>
@@ -110,12 +128,16 @@
     <h2>Dán Offset</h2>
     <textarea id="jsonInput" placeholder='"0x1234": "00 00 80 D2", ...'></textarea>
     <button class="submit-btn" onclick="submitJSON('paste')">Nhập</button>
+<button onclick="goBack()" style="margin-top:10px">🔙 Quay lại</button>
+
   </div>
 
   <div class="container" id="fileMode" style="display:none">
     <h2>Chọn File JSON</h2>
     <input type="file" id="fileInput" accept=".json,.txt">
     <button class="submit-btn" onclick="submitJSON('file')">Nhập</button>
+<button onclick="goBack()" style="margin-top:10px">🔙 Quay lại</button>
+
   </div>
 
   <div id="log"></div>
@@ -203,6 +225,18 @@
         alert("❌ Đã xảy ra lỗi khi xử lý:\n" + e.message);
       }
     }
+function goBack() {
+  document.getElementById("modeSelect").style.display = "block";
+  document.getElementById("pasteMode").style.display = "none";
+  document.getElementById("fileMode").style.display = "none";
+  logDiv.innerText = "";
+}
+
   </script>
+<!-- Logo ChatGPT -->
+<a href="https://chat.openai.com" target="_blank" id="chatgpt-link">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT" id="chatgpt-logo">
+</a>
+
 </body>
 </html>
